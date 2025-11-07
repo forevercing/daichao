@@ -3,51 +3,51 @@
 -- ===============================================
 
 -- 第一步：查看所有可用的集群
-SELECT '=== 第一步：查看集群列表 ===' AS 步骤;
+SELECT '=== 第一步：查看集群列表 ===' AS step;
 SELECT 
-    cluster AS 集群名称,
-    count() AS 节点数量,
-    groupArray(host_name) AS 节点列表
+    cluster,
+    count() AS node_count,
+    groupArray(host_name) AS host_list
 FROM system.clusters
 GROUP BY cluster;
 
 -- 第二步：查看当前连接的主机信息
-SELECT '=== 第二步：当前主机信息 ===' AS 步骤;
+SELECT '=== 第二步：当前主机信息 ===' AS step;
 SELECT 
-    hostName() AS 当前主机名,
-    version() AS ClickHouse版本,
-    uptime() AS 运行时间秒;
+    hostName() AS current_host,
+    version() AS clickhouse_version,
+    uptime() AS uptime_seconds;
 
 -- 第三步：查看所有表的概览（本地视图）
-SELECT '=== 第三步：本地表概览 ===' AS 步骤;
+SELECT '=== 第三步：本地表概览 ===' AS step;
 SELECT 
-    database AS 数据库名,
-    name AS 表名,
-    engine AS 引擎类型,
+    database,
+    name AS table_name,
+    engine,
     multiIf(
-        engine LIKE '%Distributed%', '分布式表',
-        engine LIKE '%Replicated%', '复制表',
-        engine LIKE '%MergeTree%', '本地表',
-        '其他'
-    ) AS 表类型,
-    formatReadableQuantity(total_rows) AS 行数_格式化,
-    total_rows AS 行数,
-    round(total_bytes / 1024 / 1024 / 1024, 2) AS 占用空间_GB
+        engine LIKE '%Distributed%', 'Distributed',
+        engine LIKE '%Replicated%', 'Replicated',
+        engine LIKE '%MergeTree%', 'Local',
+        'Other'
+    ) AS table_type,
+    formatReadableQuantity(total_rows) AS rows_formatted,
+    total_rows,
+    round(total_bytes / 1024 / 1024 / 1024, 2) AS size_gb
 FROM system.tables
 WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
 ORDER BY total_bytes DESC
 LIMIT 100;
 
 -- 第四步：通过 parts 表获取更精确的统计（仅 MergeTree 系列）
-SELECT '=== 第四步：精确统计（基于分区） ===' AS 步骤;
+SELECT '=== 第四步：精确统计（基于分区） ===' AS step;
 SELECT 
-    database AS 数据库名,
-    table AS 表名,
-    formatReadableQuantity(sum(rows)) AS 总行数_格式化,
-    sum(rows) AS 总行数,
-    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS 占用空间_GB,
-    count() AS 活跃分区数,
-    max(modification_time) AS 最后修改时间
+    database,
+    table,
+    formatReadableQuantity(sum(rows)) AS rows_formatted,
+    sum(rows) AS total_rows,
+    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS size_gb,
+    count() AS active_parts,
+    max(modification_time) AS last_modified
 FROM system.parts
 WHERE active = 1 
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -56,14 +56,14 @@ ORDER BY sum(bytes) DESC
 LIMIT 100;
 
 -- 第五步：数据库级别的汇总
-SELECT '=== 第五步：数据库级别汇总 ===' AS 步骤;
+SELECT '=== 第五步：数据库级别汇总 ===' AS step;
 SELECT 
-    database AS 数据库名,
-    count(DISTINCT table) AS 表数量,
-    formatReadableQuantity(sum(rows)) AS 总行数_格式化,
-    sum(rows) AS 总行数,
-    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS 占用空间_GB,
-    round(avg(bytes) / 1024 / 1024, 2) AS 平均表大小_MB
+    database,
+    count(DISTINCT table) AS table_count,
+    formatReadableQuantity(sum(rows)) AS rows_formatted,
+    sum(rows) AS total_rows,
+    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS size_gb,
+    round(avg(bytes) / 1024 / 1024, 2) AS avg_table_size_mb
 FROM system.parts
 WHERE active = 1 
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -75,14 +75,14 @@ ORDER BY sum(bytes) DESC;
 -- ===============================================
 /*
 -- 跨集群查询：查看所有节点的表信息
-SELECT '=== 跨集群查询：所有节点的表信息 ===' AS 步骤;
+SELECT '=== 跨集群查询：所有节点的表信息 ===' AS step;
 SELECT 
-    'YOUR_CLUSTER_NAME' AS 集群名称,
-    hostName() AS 节点名称,
-    database AS 数据库名,
-    table AS 表名,
-    sum(rows) AS 总行数,
-    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS 占用空间_GB
+    'YOUR_CLUSTER_NAME' AS cluster_name,
+    hostName() AS host_name,
+    database,
+    table,
+    sum(rows) AS total_rows,
+    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS size_gb
 FROM clusterAllReplicas('YOUR_CLUSTER_NAME', system.parts)
 WHERE active = 1
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -93,13 +93,13 @@ ORDER BY database, table, hostName();
 -- ===============================================
 -- 汇总统计
 -- ===============================================
-SELECT '=== 总体统计 ===' AS 步骤;
+SELECT '=== 总体统计 ===' AS step;
 SELECT 
-    count(DISTINCT database) AS 数据库总数,
-    count(DISTINCT table) AS 表总数,
-    formatReadableQuantity(sum(rows)) AS 总行数,
-    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS 总占用空间_GB,
-    round(sum(bytes) / 1024 / 1024 / 1024 / 1024, 2) AS 总占用空间_TB
+    count(DISTINCT database) AS database_count,
+    count(DISTINCT table) AS table_count,
+    formatReadableQuantity(sum(rows)) AS total_rows,
+    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS total_size_gb,
+    round(sum(bytes) / 1024 / 1024 / 1024 / 1024, 2) AS total_size_tb
 FROM system.parts
 WHERE active = 1 
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA');

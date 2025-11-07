@@ -51,10 +51,10 @@ function executeClickHouseQuery($config, $query) {
 // 查询1：获取所有表的基本信息
 $query = "
 SELECT 
-    database AS 数据库名,
-    table AS 表名,
-    sum(rows) AS 行数,
-    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS 占用空间_GB
+    database,
+    table,
+    sum(rows) AS total_rows,
+    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS size_gb
 FROM system.parts
 WHERE active = 1 
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -95,18 +95,18 @@ try {
         
         foreach ($tables as $table) {
             echo "<tr>";
-            echo "<td>" . htmlspecialchars($table['数据库名']) . "</td>";
-            echo "<td>" . htmlspecialchars($table['表名']) . "</td>";
-            echo "<td style='text-align: right;'>" . number_format($table['行数']) . "</td>";
-            echo "<td style='text-align: right;'>" . $table['占用空间_GB'] . "</td>";
+            echo "<td>" . htmlspecialchars($table['database']) . "</td>";
+            echo "<td>" . htmlspecialchars($table['table']) . "</td>";
+            echo "<td style='text-align: right;'>" . number_format($table['total_rows']) . "</td>";
+            echo "<td style='text-align: right;'>" . $table['size_gb'] . "</td>";
             echo "</tr>\n";
         }
         
         echo "</table>\n";
         
         // 统计信息
-        $totalRows = array_sum(array_column($tables, '行数'));
-        $totalGB = array_sum(array_column($tables, '占用空间_GB'));
+        $totalRows = array_sum(array_column($tables, 'total_rows'));
+        $totalGB = array_sum(array_column($tables, 'size_gb'));
         
         echo "<h2>汇总统计</h2>\n";
         echo "<p>表总数: " . count($tables) . "</p>\n";

@@ -6,10 +6,10 @@
 -- 方法1：如果你不需要查询整个集群，只需要当前连接节点的信息
 -- 这是最简单的方法
 SELECT 
-    database AS 数据库名,
-    table AS 表名,
-    sum(rows) AS 行数,
-    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS 占用空间_GB
+    database,
+    table,
+    sum(rows) AS total_rows,
+    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS size_gb
 FROM system.parts
 WHERE active = 1 
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -24,11 +24,11 @@ ORDER BY database, table;
 -- 步骤2：将下面的 'my_cluster' 替换为你的实际集群名称，然后执行
 /*
 SELECT 
-    'my_cluster' AS 集群名称,
-    database AS 数据库名,
-    table AS 表名,
-    sum(rows) AS 行数,
-    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS 占用空间_GB
+    'my_cluster' AS cluster_name,
+    database,
+    table,
+    sum(rows) AS total_rows,
+    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS size_gb
 FROM cluster('my_cluster', system.parts)
 WHERE active = 1 
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
@@ -41,12 +41,12 @@ ORDER BY database, table;
 -- 将 'my_cluster' 替换为你的实际集群名称
 /*
 SELECT 
-    'my_cluster' AS 集群名称,
-    hostName() AS 节点名称,
-    database AS 数据库名,
-    table AS 表名,
-    sum(rows) AS 行数,
-    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS 占用空间_GB
+    'my_cluster' AS cluster_name,
+    hostName() AS host_name,
+    database,
+    table,
+    sum(rows) AS total_rows,
+    round(sum(bytes) / 1024 / 1024 / 1024, 2) AS size_gb
 FROM clusterAllReplicas('my_cluster', system.parts)
 WHERE active = 1 
   AND database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
